@@ -10,6 +10,7 @@ declare global {
     interface IntrinsicElements {
       ambientLight: any;
       directionalLight: any;
+      spotLight: any;
       group: any;
       mesh: any;
       meshPhongMaterial: any;
@@ -26,6 +27,7 @@ declare module 'react' {
     interface IntrinsicElements {
       ambientLight: any;
       directionalLight: any;
+      spotLight: any;
       group: any;
       mesh: any;
       meshPhongMaterial: any;
@@ -127,8 +129,12 @@ const Globe3D: React.FC<Globe3DProps> = ({ countries, onSelectCountry, selectedC
   return (
     <>
       <CameraControls ref={controlsRef} minDistance={6} maxDistance={30} />
-      <ambientLight intensity={0.4} color="#bbbbff" />
-      <directionalLight position={[10, 10, 5]} intensity={1.5} />
+      
+      {/* Enhanced Lighting Setup */}
+      <ambientLight intensity={1.5} color="#ffffff" />
+      <directionalLight position={[5, 3, 5]} intensity={3.5} castShadow />
+      <spotLight position={[-5, -5, -5]} intensity={1.0} color="#4455aa" angle={0.5} />
+
       <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
 
       <group ref={groupRef}>
@@ -138,8 +144,8 @@ const Globe3D: React.FC<Globe3DProps> = ({ countries, onSelectCountry, selectedC
             map={colorMap}
             specularMap={specMap}
             normalMap={normalMap}
-            specular={new THREE.Color('grey')}
-            shininess={10}
+            specular={new THREE.Color(0x333333)}
+            shininess={15}
           />
         </Sphere>
 
@@ -160,7 +166,7 @@ const Globe3D: React.FC<Globe3DProps> = ({ countries, onSelectCountry, selectedC
           <meshBasicMaterial
              color="#4488ff"
              transparent
-             opacity={0.1}
+             opacity={0.15}
              side={THREE.BackSide}
              blending={THREE.AdditiveBlending}
           />

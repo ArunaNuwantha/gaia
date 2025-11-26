@@ -32,6 +32,8 @@ const InfoPanel: React.FC<InfoPanelProps> = ({ country, onClose, isLoadingAI }) 
     setIsPlaying(!isPlaying);
   };
 
+  const hasAudio = country?.aiData?.anthem?.audioUrl && country.aiData.anthem.audioUrl.length > 0;
+
   return (
     <AnimatePresence>
       {country && (
@@ -90,23 +92,26 @@ const InfoPanel: React.FC<InfoPanelProps> = ({ country, onClose, isLoadingAI }) 
             {isLoadingAI ? (
                <div className="space-y-8 animate-pulse">
                   {/* Summary Skeleton */}
-                  <div className="space-y-2 border-l-2 border-white/10 pl-4">
-                     <div className="h-4 bg-white/10 rounded w-full"></div>
-                     <div className="h-4 bg-white/10 rounded w-11/12"></div>
-                     <div className="h-4 bg-white/10 rounded w-3/4"></div>
+                  <div className="space-y-3 border-l-2 border-white/10 pl-4">
+                     <div className="h-2 bg-white/10 rounded-full w-full"></div>
+                     <div className="h-2 bg-white/10 rounded-full w-11/12"></div>
+                     <div className="h-2 bg-white/10 rounded-full w-3/4"></div>
                   </div>
 
                   {/* Tourism Skeleton */}
                   <div>
-                     <div className="h-5 bg-white/10 rounded w-32 mb-4"></div>
+                     <div className="h-4 bg-white/10 rounded w-32 mb-4"></div>
                      <div className="space-y-4">
                         {[1, 2].map((i) => (
-                           <div key={i} className="bg-white/5 p-4 rounded-lg border border-white/5 h-24 flex justify-between gap-4">
-                               <div className="flex-1 space-y-2">
-                                  <div className="h-4 bg-white/10 rounded w-24"></div>
-                                  <div className="h-3 bg-white/10 rounded w-full"></div>
+                           <div key={i} className="bg-white/5 p-4 rounded-lg border border-white/5 flex justify-between gap-4">
+                               <div className="flex-1 space-y-3">
+                                  <div className="h-3 bg-white/10 rounded w-24"></div>
+                                  <div className="space-y-2">
+                                    <div className="h-2 bg-white/10 rounded w-full"></div>
+                                    <div className="h-2 bg-white/10 rounded w-5/6"></div>
+                                  </div>
                                </div>
-                               <div className="w-16 h-full bg-white/10 rounded"></div>
+                               <div className="w-16 h-12 bg-white/10 rounded self-center"></div>
                            </div>
                         ))}
                      </div>
@@ -115,12 +120,15 @@ const InfoPanel: React.FC<InfoPanelProps> = ({ country, onClose, isLoadingAI }) 
                   {/* Culture Skeleton */}
                   <div className="grid grid-cols-1 gap-3">
                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="bg-white/5 p-3 rounded-lg h-16"></div>
+                        <div key={i} className="bg-white/5 p-3 rounded-lg h-14 flex flex-col justify-center gap-2">
+                            <div className="h-2 bg-white/10 rounded w-20"></div>
+                            <div className="h-2 bg-white/10 rounded w-32"></div>
+                        </div>
                      ))}
                   </div>
 
                   {/* Anthem Skeleton */}
-                  <div className="h-24 bg-white/5 rounded-xl"></div>
+                  <div className="h-24 bg-white/5 rounded-xl border border-white/5"></div>
                </div>
             ) : country.aiData ? (
                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -208,12 +216,20 @@ const InfoPanel: React.FC<InfoPanelProps> = ({ country, onClose, isLoadingAI }) 
 
                   {/* Anthem */}
                   <div>
-                      <h3 className="text-lg font-[Orbitron] text-orange-300 mb-4 flex items-center gap-2">
-                        <Music size={18} /> National Anthem
+                      <h3 
+                        onClick={() => hasAudio && toggleAudio()}
+                        className={`text-lg font-[Orbitron] text-orange-300 mb-4 flex items-center gap-2 select-none ${hasAudio ? 'cursor-pointer hover:text-orange-200 transition-colors' : 'opacity-80'}`}
+                      >
+                        <Music size={18} /> National Anthem 
+                        {hasAudio && (
+                           <span className="ml-auto text-[10px] uppercase tracking-widest bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-1 rounded animate-pulse">
+                             {isPlaying ? 'Playing...' : 'Click to Play'}
+                           </span>
+                        )}
                      </h3>
                      <div className="bg-gradient-to-r from-orange-900/20 to-transparent p-4 rounded-xl border-l-4 border-orange-500">
                         <div className="flex justify-between items-start">
-                           <div>
+                           <div className="flex-1">
                               <h4 className="text-orange-200 font-semibold">{country.aiData.anthem.title}</h4>
                               <p className="text-gray-400 text-sm italic mt-2 whitespace-pre-line">
                                  "{country.aiData.anthem.lyricsSnippet}"
@@ -221,13 +237,16 @@ const InfoPanel: React.FC<InfoPanelProps> = ({ country, onClose, isLoadingAI }) 
                            </div>
                            
                            {/* Audio Player */}
-                           {country.aiData.anthem.audioUrl && country.aiData.anthem.audioUrl.length > 0 && (
-                             <div className="ml-4">
+                           {hasAudio && (
+                             <div className="ml-4 flex-shrink-0">
                                 <button 
-                                  onClick={toggleAudio}
-                                  className="w-10 h-10 rounded-full bg-orange-500 text-black flex items-center justify-center hover:bg-orange-400 transition-colors shadow-lg shadow-orange-500/20"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleAudio();
+                                  }}
+                                  className="w-12 h-12 rounded-full bg-orange-500 text-black flex items-center justify-center hover:bg-orange-400 transition-all shadow-lg shadow-orange-500/20 hover:scale-105"
                                 >
-                                  {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
+                                  {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
                                 </button>
                                 <audio 
                                   ref={audioRef} 
@@ -243,7 +262,7 @@ const InfoPanel: React.FC<InfoPanelProps> = ({ country, onClose, isLoadingAI }) 
 
                </div>
             ) : (
-              <div className="text-center text-red-400 py-8 text-sm">
+              <div className="text-center text-red-400 py-8 text-sm bg-red-500/10 rounded-lg border border-red-500/20">
                  Unable to retrieve planetary data at this moment.
               </div>
             )}
