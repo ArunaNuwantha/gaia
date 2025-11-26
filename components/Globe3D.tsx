@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useEffect } from 'react';
+import React, { useRef, useMemo, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Sphere, useTexture, Stars, CameraControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -17,6 +17,8 @@ declare global {
       meshBasicMaterial: any;
       sphereGeometry: any;
       ringGeometry: any;
+      lineSegments: any;
+      lineBasicMaterial: any;
     }
   }
 }
@@ -34,6 +36,8 @@ declare module 'react' {
       meshBasicMaterial: any;
       sphereGeometry: any;
       ringGeometry: any;
+      lineSegments: any;
+      lineBasicMaterial: any;
     }
   }
 }
@@ -52,6 +56,54 @@ const latLngToVector3 = (lat: number, lng: number, radius: number): THREE.Vector
   const z = radius * Math.sin(phi) * Math.sin(theta);
   const y = radius * Math.cos(phi);
   return new THREE.Vector3(x, y, z);
+};
+
+const Borders: React.FC = () => {
+  const [data, setData] = useState<any>(null);
+
+  useEffect(() => {
+    fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson')
+      .then(res => res.json())
+      .then(setData)
+      .catch(err => console.error("Failed to load borders", err));
+  }, []);
+
+  const geometry = useMemo(() => {
+    if (!data) return null;
+    const points: number[] = [];
+    const radius = 5.015; // Just above the surface
+
+    data.features.forEach((feature: any) => {
+       const processRing = (ring: any[]) => {
+          for (let i = 0; i < ring.length - 1; i++) {
+             // GeoJSON is [lng, lat]
+             const v1 = latLngToVector3(ring[i][1], ring[i][0], radius);
+             const v2 = latLngToVector3(ring[i+1][1], ring[i+1][0], radius);
+             points.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
+          }
+       };
+
+       if (feature.geometry.type === 'Polygon') {
+          feature.geometry.coordinates.forEach((ring: any[]) => processRing(ring));
+       } else if (feature.geometry.type === 'MultiPolygon') {
+          feature.geometry.coordinates.forEach((poly: any[]) => {
+             poly.forEach((ring: any[]) => processRing(ring));
+          });
+       }
+    });
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
+    return geo;
+  }, [data]);
+
+  if (!geometry) return null;
+
+  return (
+    <lineSegments geometry={geometry}>
+      <lineBasicMaterial color="#55ffff" transparent opacity={0.25} depthWrite={false} />
+    </lineSegments>
+  );
 };
 
 const Globe3D: React.FC<Globe3DProps> = ({ countries, onSelectCountry, selectedCountry }) => {
@@ -147,6 +199,8 @@ const Globe3D: React.FC<Globe3DProps> = ({ countries, onSelectCountry, selectedC
             specular={new THREE.Color(0x333333)}
             shininess={15}
           />
+          {/* Borders overlay - nested to rotate with the globe */}
+          <Borders />
         </Sphere>
 
         {/* Clouds Sphere (slightly larger) */}
