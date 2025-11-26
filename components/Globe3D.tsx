@@ -1,8 +1,9 @@
 import React, { useRef, useMemo, useEffect, useState } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { Sphere, useTexture, Stars, CameraControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { CountryBase } from '../types';
+import { Compass as CompassIcon } from 'lucide-react';
 
 // Augment global JSX namespace to include Three.js intrinsic elements
 declare global {
@@ -103,6 +104,40 @@ const Borders: React.FC = () => {
     <lineSegments geometry={geometry}>
       <lineBasicMaterial color="#55ffff" transparent opacity={0.25} depthWrite={false} />
     </lineSegments>
+  );
+};
+
+// Compass Component
+const Compass = () => {
+  const { camera } = useThree();
+  const compassRef = useRef<HTMLDivElement>(null);
+
+  useFrame(() => {
+    if (compassRef.current) {
+      // Calculate azimuth angle (rotation around Y axis)
+      // We want the angle of the camera position relative to center (0,0,0)
+      const angle = Math.atan2(camera.position.x, camera.position.z);
+      // Convert to degrees and apply to the UI element
+      const degrees = angle * (180 / Math.PI);
+      compassRef.current.style.transform = `rotate(${degrees}deg)`;
+    }
+  });
+
+  return (
+    <Html fullscreen style={{ pointerEvents: 'none', overflow: 'hidden' }}>
+      <div className="absolute bottom-8 right-8 z-50 pointer-events-auto">
+        <div className="relative w-16 h-16 bg-black/40 backdrop-blur-md rounded-full border border-white/10 shadow-xl flex items-center justify-center">
+          {/* Static North Marker */}
+          <div className="absolute top-1 text-[10px] font-bold text-cyan-400">N</div>
+          
+          {/* Rotating Needle */}
+          <div ref={compassRef} className="w-full h-full flex items-center justify-center transition-transform duration-75 ease-linear will-change-transform">
+             <div className="w-1 h-8 bg-gradient-to-t from-red-500 to-transparent opacity-80 rounded-full origin-bottom transform -translate-y-2"></div>
+             <CompassIcon size={32} className="text-white/80 absolute" strokeWidth={1} />
+          </div>
+        </div>
+      </div>
+    </Html>
   );
 };
 
@@ -231,6 +266,9 @@ const Globe3D: React.FC<Globe3DProps> = ({ countries, onSelectCountry, selectedC
           <Marker country={selectedCountry} globeRotation={globeRef.current?.rotation} />
         )}
       </group>
+      
+      {/* Compass Overlay */}
+      <Compass />
     </>
   );
 };
