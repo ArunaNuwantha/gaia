@@ -1,15 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CountryFull } from '../types';
-import { X, MapPin, Users, Globe, BookOpen, Music, Plane, Landmark, Play, Pause } from 'lucide-react';
+import { X, MapPin, Users, Globe, BookOpen, Music, Plane, Landmark, Play, Pause, Heart } from 'lucide-react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 
 interface InfoPanelProps {
   country: CountryFull | null;
   onClose: () => void;
   isLoadingAI: boolean;
+  isFavorite: boolean;
+  onToggleFavorite: () => void;
 }
 
-const InfoPanel: React.FC<InfoPanelProps> = ({ country, onClose, isLoadingAI }) => {
+const InfoPanel: React.FC<InfoPanelProps> = ({ country, onClose, isLoadingAI, isFavorite, onToggleFavorite }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -73,13 +75,22 @@ const InfoPanel: React.FC<InfoPanelProps> = ({ country, onClose, isLoadingAI }) 
                className="w-full h-full object-cover opacity-70"
              />
              
-             {/* Close Button */}
-             <button 
-                onClick={onClose}
-                className="absolute top-4 right-4 z-30 p-2 rounded-full bg-black/40 hover:bg-white/20 transition-colors backdrop-blur-md border border-white/10 group"
-             >
-                <X size={20} className="text-gray-300 group-hover:text-white transition-colors" />
-             </button>
+             {/* Action Buttons */}
+             <div className="absolute top-4 right-4 z-30 flex gap-2">
+                <button 
+                  onClick={onToggleFavorite}
+                  className="p-2 rounded-full bg-black/40 hover:bg-white/20 transition-all backdrop-blur-md border border-white/10 group"
+                  title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+                >
+                  <Heart size={20} className={`transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-300 group-hover:text-white'}`} />
+                </button>
+                <button 
+                  onClick={onClose}
+                  className="p-2 rounded-full bg-black/40 hover:bg-white/20 transition-all backdrop-blur-md border border-white/10 group"
+                >
+                  <X size={20} className="text-gray-300 group-hover:text-white transition-colors" />
+                </button>
+             </div>
 
              {/* Title Block */}
              <div className="absolute bottom-4 left-6 z-20 w-full pr-12">

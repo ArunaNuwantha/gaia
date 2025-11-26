@@ -141,6 +141,22 @@ const Compass = () => {
   );
 };
 
+// New Component: Galaxy Background
+const GalaxyBackground = () => {
+  const texture = useTexture('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/cube/MilkyWay/dark-s_px.jpg'); // Using a dark space texture
+  
+  return (
+    <Sphere args={[100, 64, 64]}>
+      <meshBasicMaterial 
+        map={texture} 
+        side={THREE.BackSide} 
+        transparent 
+        opacity={0.6} // Slight opacity to blend with black background
+      />
+    </Sphere>
+  );
+};
+
 const Globe3D: React.FC<Globe3DProps> = ({ countries, onSelectCountry, selectedCountry }) => {
   const globeRef = useRef<THREE.Mesh>(null);
   const cloudsRef = useRef<THREE.Mesh>(null);
@@ -222,7 +238,8 @@ const Globe3D: React.FC<Globe3DProps> = ({ countries, onSelectCountry, selectedC
       <directionalLight position={[5, 3, 5]} intensity={3.5} castShadow />
       <spotLight position={[-5, -5, -5]} intensity={1.0} color="#4455aa" angle={0.5} />
 
-      <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+      <Stars radius={150} depth={50} count={6000} factor={4} saturation={0} fade speed={1} />
+      <GalaxyBackground />
 
       <group ref={groupRef}>
         {/* Main Earth Sphere */}

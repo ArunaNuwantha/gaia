@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Loader } from '@react-three/drei';
-import { Search, Globe as GlobeIcon, Share2, Info, X } from 'lucide-react';
+import { Search, Globe as GlobeIcon, Share2, Info, X, Mic, Heart } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Globe3D from './components/Globe3D';
 import InfoPanel from './components/InfoPanel';
@@ -15,6 +15,10 @@ const App: React.FC = () => {
   const [loadingAi, setLoadingAi] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState(false);
+  
+  // Favorites State
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   // Initial Data Fetch
   useEffect(() => {
@@ -30,6 +34,12 @@ const App: React.FC = () => {
       }
     };
     initData();
+
+    // Load favorites from local storage
+    const savedFavs = localStorage.getItem('gaia_favorites');
+    if (savedFavs) {
+       setFavorites(JSON.parse(savedFavs));
+    }
   }, []);
 
   // Handle Selection & AI Fetch
@@ -59,12 +69,63 @@ const App: React.FC = () => {
     });
   };
 
+  const toggleFavorite = () => {
+     if (!selectedCountry) return;
+     
+     let newFavs;
+     if (favorites.includes(selectedCountry.cca3)) {
+        newFavs = favorites.filter(id => id !== selectedCountry.cca3);
+        setToast("Removed from favorites");
+     } else {
+        newFavs = [...favorites, selectedCountry.cca3];
+        setToast("Added to favorites");
+     }
+     
+     setFavorites(newFavs);
+     localStorage.setItem('gaia_favorites', JSON.stringify(newFavs));
+     setTimeout(() => setToast(null), 2000);
+  };
+
+  // Voice Search Implementation
+  const startVoiceSearch = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+       setToast("Voice command system not available.");
+       setTimeout(() => setToast(null), 3000);
+       return;
+    }
+    
+    // @ts-ignore - SpeechRecognition is not fully typed in all TS configs
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.start();
+    
+    setToast("Listening for sector name...");
+
+    recognition.onresult = (event: any) => {
+       const transcript = event.results[0][0].transcript;
+       setSearchQuery(transcript);
+       setToast(null);
+    };
+
+    recognition.onerror = () => {
+       setToast("Voice command failed.");
+       setTimeout(() => setToast(null), 2000);
+    };
+  };
+
   const filteredCountries = useMemo(() => {
-     if (!searchQuery) return [];
-     return allCountries
+     let list = allCountries;
+     if (showFavoritesOnly) {
+        list = list.filter(c => favorites.includes(c.cca3));
+     }
+     
+     if (!searchQuery) return showFavoritesOnly ? list : [];
+
+     return list
        .filter(c => c.name.common.toLowerCase().includes(searchQuery.toLowerCase()))
        .slice(0, 5); // Limit suggestions
-  }, [allCountries, searchQuery]);
+  }, [allCountries, searchQuery, favorites, showFavoritesOnly]);
 
   return (
     <div className="relative w-full h-screen bg-black text-white overflow-hidden">
@@ -92,22 +153,37 @@ const App: React.FC = () => {
           <p className="text-xs text-cyan-500/70 tracking-[0.3em] uppercase">Planetary Explorer System</p>
         </div>
 
-        <div className="pointer-events-auto relative">
-           <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 transition-all focus-within:bg-black/80 focus-within:border-cyan-500/50 w-48 md:w-80">
-              <Search size={18} className="text-cyan-400" />
-              <input 
-                type="text"
-                placeholder="Locate sector..."
-                className="bg-transparent border-none outline-none text-sm w-full text-white placeholder-gray-500 font-mono"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+        <div className="pointer-events-auto relative flex flex-col items-end gap-2">
+           <div className="flex items-center gap-2">
+              {/* Favorites Toggle */}
+              <button 
+                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                className={`p-2 rounded-full border transition-all ${showFavoritesOnly ? 'bg-red-500/20 border-red-500 text-red-400' : 'bg-black/40 border-white/10 text-gray-400 hover:text-white'}`}
+                title="Toggle Favorites"
+              >
+                 <Heart size={18} fill={showFavoritesOnly ? "currentColor" : "none"} />
+              </button>
+
+              {/* Search Bar */}
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 transition-all focus-within:bg-black/80 focus-within:border-cyan-500/50 w-48 md:w-80">
+                  <Search size={18} className="text-cyan-400" />
+                  <input 
+                    type="text"
+                    placeholder={showFavoritesOnly ? "Search favorites..." : "Locate sector..."}
+                    className="bg-transparent border-none outline-none text-sm w-full text-white placeholder-gray-500 font-mono"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <button onClick={startVoiceSearch} className="text-gray-400 hover:text-cyan-300 transition-colors">
+                     <Mic size={16} />
+                  </button>
+              </div>
            </div>
 
            {/* Search Dropdown */}
-           {filteredCountries.length > 0 && (
-              <div className="absolute top-full mt-2 left-0 w-full bg-black/90 border border-white/20 rounded-xl overflow-hidden backdrop-blur-xl shadow-2xl">
-                {filteredCountries.map(c => (
+           {(filteredCountries.length > 0 || (showFavoritesOnly && filteredCountries.length === 0)) && (
+              <div className="absolute top-full mt-2 w-80 bg-black/90 border border-white/20 rounded-xl overflow-hidden backdrop-blur-xl shadow-2xl">
+                {filteredCountries.length > 0 ? filteredCountries.map(c => (
                   <button 
                     key={c.cca3}
                     onClick={() => handleSelectCountry(c)}
@@ -115,8 +191,11 @@ const App: React.FC = () => {
                   >
                     <img src={c.flags.svg} alt="flag" className="w-6 h-4 object-cover rounded shadow-sm" />
                     <span className="text-sm font-medium">{c.name.common}</span>
+                    {favorites.includes(c.cca3) && <Heart size={12} className="ml-auto text-red-500 fill-red-500" />}
                   </button>
-                ))}
+                )) : (
+                  <div className="p-4 text-center text-gray-500 text-sm">No favorites found.</div>
+                )}
               </div>
            )}
         </div>
@@ -189,7 +268,7 @@ const App: React.FC = () => {
                    <div className="pt-4 border-t border-white/10 flex flex-col gap-2">
                       <div className="flex justify-between">
                          <span className="text-gray-500">Version</span>
-                         <span className="font-mono text-cyan-400">1.2.0 (Stable)</span>
+                         <span className="font-mono text-cyan-400">1.3.0 (Enhanced)</span>
                       </div>
                       <div className="flex justify-between">
                          <span className="text-gray-500">Data Source</span>
@@ -206,7 +285,9 @@ const App: React.FC = () => {
       <InfoPanel 
         country={selectedCountry} 
         isLoadingAI={loadingAi} 
-        onClose={() => setSelectedCountry(null)} 
+        onClose={() => setSelectedCountry(null)}
+        isFavorite={selectedCountry ? favorites.includes(selectedCountry.cca3) : false}
+        onToggleFavorite={toggleFavorite}
       />
 
     </div>
